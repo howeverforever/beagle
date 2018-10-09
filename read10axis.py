@@ -21,8 +21,9 @@ class Beagle(object):
         with open(config, 'r') as f:
             self._ip_addr = f.readline()[:-1]
             self._port = int(f.readline()[:-1])
+            self._label = f.readline()[:-1]
 
-    def capture_sensor(self):
+    def capture_sensor(self, mode='all'):
         ts = time.time()
         st = bg.get_datetime(ts).strftime('%Y-%m-%d_%H%M%S')
 
@@ -32,8 +33,9 @@ class Beagle(object):
             threads['remote'] = threading.Thread(target=self.__send_to_remote, args=(st,))
 
             for key, thread in threads.items():
-                thread.daemon = True
-                thread.start()
+                if mode in [key, 'all']:
+                    thread.daemon = True
+                    thread.start()
 
             while True:
                 time.sleep(100)
@@ -112,14 +114,15 @@ class Beagle(object):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect((self._ip_addr, self._port))
 
-        sys.stdout.write('connect successful\n')
+        sys.stdout.write('connect %s successful\n' % self._ip_addr)
         sys.stdout.flush()
 
         data_rows = 0
         while True:
             try:
                 row = self.__get_raw_data_row()
-                send_data = pickle.dumps(row)
+                send_row = row + [data_rows, self._label]
+                send_data = pickle.dumps(send_row)
                 sock.sendall(send_data)
 
                 data_rows += 1
@@ -129,8 +132,9 @@ class Beagle(object):
                     sys.stdout.write('[%s] %6d rows have been collected.\n' % (st, data_rows))
                     sys.stdout.flush()
 
-            except (KeyboardInterrupt, TypeError):
-                sock.send('Q'.encode())
+            except KeyboardInterrupt:
+                send_row = ['Q']
+                sock.sendall(pickle.dumps(send_row))
                 break
 
         sock.close()
@@ -138,14 +142,13 @@ class Beagle(object):
 
 def main():
     parser = argparse.ArgumentParser(description='Collect data from BeagleBone Blue')
-    parser.add_argument('-6', help='6 Axis', action='store_true')
-    parser.add_argument('-10', help='10 Axis', action='store_true')
+    parser.add_argument('-6', help='10 Axis', action='store_true', default='True')
 
     args = vars(parser.parse_args())
-    axis_10 = args['10']
+    axis_10 = not args['6']
 
     bg_ = Beagle(axis_10)
-    bg_.capture_sensor()
+    bg_.capture_sensor('remote')
 
     return 0
 
