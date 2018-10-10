@@ -1,9 +1,13 @@
-import os
 import sys
-import posixpath
 
 
-def create_local_host():
+def create_remote_host():
+    sys.stdout.write('What\'s the position of this sensor?\n')
+    sys.stdout.write('%16s: ' % '[0: left, 1:right]')
+    sys.stdout.flush()
+    position = input()
+    label = 'L' if position == 0 else 'R'
+
     sys.stdout.write('Input the information about remote machine:\n')
     sys.stdout.write('%16s: ' % '[ip_address]')
     sys.stdout.flush()
@@ -16,6 +20,7 @@ def create_local_host():
     with open(filename, 'w') as f:
         f.write(ip_addr + '\n')
         f.write(port + '\n')
+        f.write(label + '\n')
 
 
 def main():
