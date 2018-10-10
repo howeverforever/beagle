@@ -22,6 +22,7 @@ class Beagle(object):
             self._ip_addr = f.readline()[:-1]
             self._port = int(f.readline()[:-1])
             self._label = f.readline()[:-1]
+            f.close()
 
     def capture_sensor(self, mode='all'):
         ts = time.time()
@@ -40,8 +41,12 @@ class Beagle(object):
             while True:
                 time.sleep(100)
 
-        except (KeyboardInterrupt, SystemExit):
+        except (KeyboardInterrupt, Exception):
             pass
+
+        for _, thread in threads.items():
+            if thread.isAlive():
+                thread.join()
 
     def __get_raw_data_row(self):
         ts = time.time()
@@ -148,7 +153,7 @@ def main():
     axis_10 = not args['6']
 
     bg_ = Beagle(axis_10)
-    bg_.capture_sensor('remote')
+    bg_.capture_sensor('all')
 
     return 0
 
